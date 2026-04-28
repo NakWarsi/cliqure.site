@@ -1,0 +1,96 @@
+<article class="get-app">
+  <header class="get-app__hero hero-mesh relative overflow-hidden px-6 pb-20 pt-14 md:px-10 md:pb-28 md:pt-16">
+    <div class="hero-swoosh-arc pointer-events-none" aria-hidden="true"></div>
+    <div class="hero-hex pointer-events-none opacity-[0.18]" aria-hidden="true"></div>
+    <div class="relative z-[1] mx-auto max-w-2xl text-center">
+      <p class="get-app__kicker rise-in">DOWNLOAD</p>
+      <h1 class="get-app__title rise-in rise-in--d1 text-primary">Get the Cliqure app</h1>
+      <p class="get-app__lede rise-in rise-in--d2 mx-auto max-w-xl">
+        PatientTrack on the devices your teams already use. Pick your platform below — every client stays in sync with the same
+        secure backend.
+      </p>
+    </div>
+  </header>
+
+  <div class="get-app__body">
+    <div class="get-app__grid">
+      @for (p of platforms; track p.id) {
+        <div class="get-app-card glass-card">
+          <div class="get-app-card__head">
+            <div class="get-app-card__platform">
+              <div class="get-app-card__icon" aria-hidden="true">
+                @switch (p.id) {
+                  @case ('android') {
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-7 w-7">
+                      <path
+                        d="M8 5.5 6.5 3.8a.5.5 0 0 1 .8-.6l1.6 1.9M16 5.5l1.5-1.7a.5.5 0 0 0-.8-.6l-1.6 1.9M6.5 8h11v9a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2V8Z"
+                        stroke="currentColor"
+                        stroke-width="1.35"
+                        stroke-linejoin="round"
+                      />
+                      <path d="M4 10.5c0-1.1.9-2 2-2h12a2 2 0 0 1 2 2v1H4v-1Z" fill="currentColor" fill-opacity="0.15" />
+                      <path d="M9 14v3M15 14v3" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" />
+                    </svg>
+                  }
+                  @case ('ios') {
+                    <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" class="h-7 w-7">
+                      <path
+                        d="M16.4 3.2c.1 1.6-.5 3.1-1.4 4.2-.9 1.1-2.3 2-3.9 1.9-.2-1.5.5-3 1.4-4.1 1-1.2 2.5-2 3.9-2ZM18.5 13.2c0 2.6 1.4 5.2 4.2 6.5-.7 2.3-1.7 4.5-3.2 6.1-1.7 1.8-3.6 1.9-4.6 1.7-1.2-.2-2.1-.1-3.2.2-1.4.3-2.7.9-4.5-.1-1-.5-1.8-1.3-2.5-2.2 1.1-1.1 1.8-2.6 1.8-4.2 0-2.6-1.4-4.8-3.6-5.7.8-2.1 2.3-3.8 4.3-4.6 1.3-.5 3.1-.6 4.1.4.9.8 2.1.8 3.2.2Z"
+                      />
+                    </svg>
+                  }
+                  @case ('windows') {
+                    <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" class="h-7 w-7">
+                      <path d="M3 5.5 11 4.2v7.1L3 12.4V5.5Zm8.2-.9L21 3v8.4l-9.8 1.4V4.6Zm9.8 9.1L21 21l-9.8-1.4v-7.2L21 13.7ZM11 20.8 3 19.5v-6.9l8 1.1v7.1Z" />
+                    </svg>
+                  }
+                  @case ('web') {
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-7 w-7">
+                      <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.35" />
+                      <path
+                        d="M3.6 12h16.8M12 3.2c2.8 3.6 2.8 14 0 17.6M12 3.2c-2.8 3.6-2.8 14 0 17.6"
+                        stroke="currentColor"
+                        stroke-width="1.35"
+                        stroke-linecap="round"
+                      />
+                    </svg>
+                  }
+                }
+              </div>
+              <h2 class="glass-title m-0 text-lg font-bold">{{ p.name }}</h2>
+            </div>
+            @if (supportsQr(p.id)) {
+              <div class="get-app-card__qr" aria-label="Scan QR code to open link">
+                <img
+                  [src]="getQrCodeUrl(p.href)"
+                  [alt]="'QR code for ' + p.name + ' download'"
+                  [attr.title]="'QR code for ' + p.name"
+                  loading="lazy"
+                />
+                <p class="get-app-card__qr-note">Scan to install</p>
+              </div>
+            }
+          </div>
+          <p class="glass-desc m-0 text-sm leading-relaxed">{{ p.description }}</p>
+          <a
+            class="btn-primary-gradient get-app-card__cta mt-auto inline-flex justify-center rounded-2xl px-5 py-2.5 text-sm font-semibold no-underline"
+            [href]="p.href"
+            target="_blank"
+            rel="noopener noreferrer"
+            [attr.aria-label]="p.cta + ' (opens in a new tab)'"
+          >
+            {{ p.cta }}
+          </a>
+        </div>
+      }
+    </div>
+
+    <aside class="get-app-foot rise-in rise-in--d3">
+      <p class="get-app-foot__text">
+        IT or compliance need an enterprise build?
+        <a routerLink="/contact" class="get-app-foot__link">Contact us</a>
+        for deployment options and SSO.
+      </p>
+    </aside>
+  </div>
+</article>
