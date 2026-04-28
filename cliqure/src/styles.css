@@ -357,13 +357,20 @@
   .hero-dots {
     @apply absolute bottom-6 left-1/2 z-[2] flex -translate-x-1/2 items-center gap-2;
   }
-  .hero-dots span {
+  .hero-dot {
     @apply block h-1.5 w-1.5 rounded-full;
     background: rgba(13, 77, 77, 0.28);
+    border: 0;
+    padding: 0;
+    transition: all 220ms ease;
   }
-  .hero-dots span.active {
+  .hero-dot.active {
     @apply h-2 w-6;
     background: linear-gradient(90deg, #d4a857, #b8860b);
+  }
+  .hero-dot:focus-visible {
+    outline: 2px solid rgba(13, 77, 77, 0.45);
+    outline-offset: 3px;
   }
 
   /* Deep blurred floating UI accent — sits BEHIND the laptop for depth */
