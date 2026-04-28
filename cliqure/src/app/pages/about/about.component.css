@@ -1,0 +1,51 @@
+.page {
+  padding: clamp(2rem, 5vw, 3.5rem) var(--gutter) 4rem;
+  background: var(--color-bg);
+  min-height: calc(100vh - var(--header-height) - 2rem);
+}
+
+.page__inner {
+  max-width: 42rem;
+  margin: 0 auto;
+}
+
+.page__kicker {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--color-primary);
+  margin: 0 0 0.5rem;
+}
+
+.page__title {
+  margin: 0 0 1rem;
+  font-size: clamp(1.75rem, 3.5vw, 2.25rem);
+  color: var(--color-primary);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.page__lede,
+.page__body {
+  color: var(--color-text-muted);
+  line-height: 1.65;
+  margin: 0 0 1.25rem;
+  font-size: 1.05rem;
+}
+
+.page__cta {
+  display: inline-block;
+  margin-top: 0.5rem;
+  padding: 0.65rem 1.35rem;
+  background: var(--color-accent);
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: var(--radius-pill);
+}
+
+.page__cta:hover {
+  background: var(--color-accent);
+  color: #fff;
+  filter: brightness(0.95);
+}

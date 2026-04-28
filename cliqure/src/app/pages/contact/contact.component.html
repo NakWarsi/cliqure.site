@@ -1,0 +1,38 @@
+<article class="page">
+  <div class="page__inner page__inner--form">
+    <p class="page__kicker">CONTACT</p>
+    <h1 class="page__title">Let’s talk about your workflows</h1>
+    <p class="page__lede">
+      Tell us a bit about your team and we’ll follow up. This form is a starting point; you can also reach us
+      at <a href="mailto:hello@cliqure.example">hello@cliqure.example</a> (update with your real address).
+    </p>
+    <form class="form" (ngSubmit)="onSubmit()">
+      <label class="form__field">
+        <span class="form__label">Work email</span>
+        <input
+          class="form__input"
+          type="email"
+          name="email"
+          [(ngModel)]="email"
+          required
+          autocomplete="email"
+        />
+      </label>
+      <label class="form__field">
+        <span class="form__label">Organization</span>
+        <input
+          class="form__input"
+          type="text"
+          name="organization"
+          [(ngModel)]="organization"
+          autocomplete="organization"
+        />
+      </label>
+      <label class="form__field">
+        <span class="form__label">What should we know?</span>
+        <textarea class="form__textarea" name="message" rows="4" [(ngModel)]="message"></textarea>
+      </label>
+      <button class="form__submit" type="submit">Send message</button>
+    </form>
+  </div>
+</article>
