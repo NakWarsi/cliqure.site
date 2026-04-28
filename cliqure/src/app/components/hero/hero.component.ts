@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 @Component({
@@ -7,7 +7,7 @@ import { RouterLink } from '@angular/router';
   templateUrl: './hero.component.html',
   styleUrl: './hero.component.css',
 })
-export class HeroComponent {
+export class HeroComponent implements OnInit, OnDestroy {
   protected readonly badge = 'Digital Solutions for Smarter Healthcare';
   protected readonly slides = [
     {
@@ -41,16 +41,20 @@ export class HeroComponent {
   ] as const;
 
   protected currentSlide = 0;
+  private readonly autoSlideMs = 4500;
+  private autoSlideTimerId: number | null = null;
 
   protected readonly ctaPrimary = { label: 'Explore PatientTrack', link: '/product' as const };
   protected readonly ctaSecondary = { label: 'About Cliqure', link: '/about' as const };
 
   protected previousSlide(): void {
     this.currentSlide = (this.currentSlide - 1 + this.slides.length) % this.slides.length;
+    this.restartAutoSlide();
   }
 
   protected nextSlide(): void {
     this.currentSlide = (this.currentSlide + 1) % this.slides.length;
+    this.restartAutoSlide();
   }
 
   protected goToSlide(index: number): void {
@@ -58,5 +62,45 @@ export class HeroComponent {
       return;
     }
     this.currentSlide = index;
+    this.restartAutoSlide();
+  }
+
+  protected pauseAutoSlide(): void {
+    this.stopAutoSlide();
+  }
+
+  protected resumeAutoSlide(): void {
+    this.startAutoSlide();
+  }
+
+  ngOnInit(): void {
+    this.startAutoSlide();
+  }
+
+  ngOnDestroy(): void {
+    this.stopAutoSlide();
+  }
+
+  private startAutoSlide(): void {
+    if (this.autoSlideTimerId !== null) {
+      return;
+    }
+
+    this.autoSlideTimerId = window.setInterval(() => {
+      this.currentSlide = (this.currentSlide + 1) % this.slides.length;
+    }, this.autoSlideMs);
+  }
+
+  private stopAutoSlide(): void {
+    if (this.autoSlideTimerId === null) {
+      return;
+    }
+    window.clearInterval(this.autoSlideTimerId);
+    this.autoSlideTimerId = null;
+  }
+
+  private restartAutoSlide(): void {
+    this.stopAutoSlide();
+    this.startAutoSlide();
   }
 }

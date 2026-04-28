@@ -9,7 +9,13 @@
   <button type="button" class="hero-arrow hero-arrow--left" aria-label="Previous slide" (click)="previousSlide()">‹</button>
   <button type="button" class="hero-arrow hero-arrow--right" aria-label="Next slide" (click)="nextSlide()">›</button>
 
-  <div class="hero-carousel">
+  <div
+    class="hero-carousel"
+    (mouseenter)="pauseAutoSlide()"
+    (mouseleave)="resumeAutoSlide()"
+    (focusin)="pauseAutoSlide()"
+    (focusout)="resumeAutoSlide()"
+  >
     <div class="hero-carousel__track" [style.transform]="'translateX(-' + (currentSlide * 100) + '%)'">
       @for (slide of slides; track slide.id; let i = $index) {
         <div class="hero-carousel__slide">
