@@ -18,6 +18,10 @@
   will-change: transform;
 }
 
+.hero-carousel__track--no-transition {
+  transition: none;
+}
+
 .hero-carousel__slide {
   flex: 0 0 100%;
   width: 100%;

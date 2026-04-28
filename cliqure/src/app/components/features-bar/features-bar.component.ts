@@ -114,13 +114,16 @@ export class FeaturesBarComponent implements AfterViewInit, OnDestroy {
 
         viewport.scrollBy({ left: this.cardStepPx, behavior: 'smooth' });
 
-        // Keep loop seamless by snapping back once we pass the first sequence.
-        const halfWidth = viewport.scrollWidth / 2;
-        if (viewport.scrollLeft >= halfWidth) {
-          window.setTimeout(() => {
-            viewport.scrollLeft -= halfWidth;
-          }, 420);
-        }
+        // After smooth scroll finishes, jump back by one loop length without animating (avoids “rewind”).
+        window.setTimeout(() => {
+          const halfWidth = viewport.scrollWidth / 2;
+          if (viewport.scrollLeft >= halfWidth - 2) {
+            viewport.scrollTo({
+              left: viewport.scrollLeft - halfWidth,
+              behavior: 'instant',
+            });
+          }
+        }, 450);
       }, this.autoScrollMs);
     });
   }

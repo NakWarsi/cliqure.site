@@ -8,7 +8,6 @@
 
 .features-carousel__viewport {
   overflow-x: auto;
-  scroll-behavior: smooth;
   scrollbar-width: none;
   -ms-overflow-style: none;
   padding: 2px 0;

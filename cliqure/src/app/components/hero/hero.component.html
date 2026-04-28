@@ -16,8 +16,12 @@
     (focusin)="pauseAutoSlide()"
     (focusout)="resumeAutoSlide()"
   >
-    <div class="hero-carousel__track" [style.transform]="'translateX(-' + (currentSlide * 100) + '%)'">
-      @for (slide of slides; track slide.id; let i = $index) {
+    <div
+      class="hero-carousel__track"
+      [class.hero-carousel__track--no-transition]="!slideTransitionEnabled"
+      [style.transform]="'translateX(-' + (currentSlide * 100) + '%)'"
+    >
+      @for (slide of trackSlides; track $index; let i = $index) {
         <div class="hero-carousel__slide">
           <div class="relative z-[1] mx-auto grid max-w-[1200px] items-center gap-12 lg:grid-cols-5 lg:gap-10">
             <div class="max-w-xl space-y-6 lg:col-span-2 lg:pr-2">
@@ -27,7 +31,7 @@
                 {{ badge }}
               </span>
               <h1
-                id="hero-heading"
+                [attr.id]="i === 0 ? 'hero-heading' : null"
                 class="rise-in rise-in--d1 text-5xl font-extrabold leading-[1.05] tracking-tight text-primary sm:text-6xl lg:text-[3.6rem] xl:text-[4.2rem]"
               >
                 {{ slide.headingLine1 }}<br />
@@ -231,10 +235,10 @@
       <button
         type="button"
         class="hero-dot"
-        [class.active]="i === currentSlide"
+        [class.active]="isDotActive(i)"
         [attr.aria-label]="'Go to slide ' + (i + 1)"
         [attr.title]="'Go to slide ' + (i + 1)"
-        [attr.aria-current]="i === currentSlide ? 'true' : null"
+        [attr.aria-current]="isDotActive(i) ? 'true' : null"
         (click)="goToSlide(i)"
       >
         <span class="sr-only">Go to slide {{ i + 1 }}</span>
