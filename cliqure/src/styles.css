@@ -65,6 +65,7 @@
 
   .logo-mark {
     @apply h-full w-full object-contain;
+    clip-path: circle(50% at 50% 50%);
   }
 
   .logo-wordmark {
