@@ -42,7 +42,10 @@
               </p>
               <div class="rise-in rise-in--d3 flex flex-wrap gap-3 pt-2">
                 <a
-                  [routerLink]="ctaPrimary.link"
+                  [href]="ctaPrimary.href"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  [attr.aria-label]="ctaPrimary.label + ' (opens app in a new tab)'"
                   class="btn-primary-gradient inline-flex items-center gap-2 rounded-2xl px-7 py-3.5 text-sm no-underline sm:text-base"
                 >
                   {{ ctaPrimary.label }}
