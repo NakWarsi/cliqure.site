@@ -25,7 +25,7 @@ interface WhyCard {
 })
 export class ProductIntroComponent {
   protected readonly kicker = 'Our Product';
-  protected readonly headline = 'Introducing PatientTrack';
+  protected readonly headline = 'Introducing Cliqure';
   protected readonly description =
     'A smart patient tracking and management platform designed for modern healthcare facilities.';
 

@@ -51,7 +51,7 @@ export class HeroComponent implements OnInit, OnDestroy {
   private autoSlideTimerId: number | null = null;
   private snapTimerId: ReturnType<typeof setTimeout> | null = null;
 
-  protected readonly ctaPrimary = { label: 'Explore PatientTrack', link: '/product' as const };
+  protected readonly ctaPrimary = { label: 'Explore Cliqure', link: '/product' as const };
   protected readonly ctaSecondary = { label: 'About Cliqure', link: '/about' as const };
 
   protected isDotActive(i: number): boolean {

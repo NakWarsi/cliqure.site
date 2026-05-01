@@ -29,7 +29,7 @@ export class GetTheAppComponent {
       name: 'Android',
       description: 'Phones and tablets on Google Play — install in one tap.',
       cta: 'Get on Google Play',
-      href: 'https://play.google.com/store/apps/details?id=com.yourcompany.patienttrack',
+      href: 'https://play.google.com/store/apps/details?id=com.yourcompany.cliqure',
     },
     {
       id: 'ios',

@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Cliqure / PatientTrack design tokens — deep teal #0d4d4d, gold #c5a059 */
+/* Cliqure design tokens — deep teal #0d4d4d, gold #c5a059 */
 @layer base {
   :root {
     --cliqure-teal: #0d4d4d;
