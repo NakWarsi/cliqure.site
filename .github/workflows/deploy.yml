@@ -1,0 +1,403 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+# Project layout note:
+#   - Repo root:        cliqure.site/
+#   - Angular project:  cliqure.site/cliqure/   (sourceRoot: src, public/ used as static assets)
+#   - Build output:     cliqure.site/cliqure/dist/cliqure/browser/
+#
+# Deployment mode:
+#   - Currently deploying as a GitHub Pages PROJECT site:
+#       URL:        https://<owner>.github.io/cliqure.site/
+#       base-href:  /cliqure.site/
+#       CNAME:      not written
+#   - When ready to switch to the custom domain (cliqure.com):
+#       1. Set CUSTOM_DOMAIN below to "cliqure.com"
+#       2. Configure DNS (A records to GitHub Pages IPs, or CNAME for subdomain)
+#       3. Re-run the workflow — it will write the CNAME file and use base-href=/
+
+env:
+  ANGULAR_DIR: cliqure
+  PROJECT_NAME: cliqure
+  REPO_NAME: cliqure.site
+  # Leave empty to deploy at https://<owner>.github.io/cliqure.site/.
+  # Set to "cliqure.com" (or any custom domain) when you're ready to map DNS.
+  CUSTOM_DOMAIN: ''
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cliqure
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history to ensure we have latest code
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: cliqure/package-lock.json
+
+      - name: Verify latest code
+        working-directory: ${{ github.workspace }}
+        run: |
+          echo "=== Git Information ==="
+          echo "Current commit: $(git rev-parse HEAD)"
+          echo "Current branch: $(git branch --show-current)"
+          echo "Latest commit message: $(git log -1 --pretty=%B)"
+          echo "Latest commit date: $(git log -1 --pretty=%cd)"
+          echo ""
+          echo "=== Recent changes ==="
+          git log --oneline -5
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Clean previous builds
+        run: |
+          echo "Cleaning previous build artifacts..."
+          rm -rf dist/
+          rm -rf .angular/
+          echo "✓ Cleaned build directories"
+
+      - name: Build
+        run: |
+          # Choose base-href based on deployment target:
+          #   - Custom domain set      -> served from root, base-href = /
+          #   - No custom domain (now) -> GitHub Pages project site at /<repo>/, base-href = /<repo>/
+          if [ -n "${{ env.CUSTOM_DOMAIN }}" ]; then
+            BASE_HREF="/"
+            echo "Building with base-href: $BASE_HREF (custom domain: ${{ env.CUSTOM_DOMAIN }})"
+          else
+            BASE_HREF="/${{ env.REPO_NAME }}/"
+            echo "Building with base-href: $BASE_HREF (GitHub Pages project site)"
+          fi
+          echo "Build timestamp: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+          echo "Commit SHA: ${{ github.sha }}"
+          npx ng build --configuration production --base-href=$BASE_HREF --output-path=dist/${{ env.PROJECT_NAME }}
+          echo "Build completed"
+
+          # Angular creates a browser/ subdirectory, so actual output is at dist/<project>/browser/
+          BROWSER_ROOT="dist/${{ env.PROJECT_NAME }}/browser"
+
+          # Add build info to verify deployment
+          echo "Build completed at $(date -u +'%Y-%m-%d %H:%M:%S UTC')" > "$BROWSER_ROOT/build-info.txt"
+          echo "Commit: ${{ github.sha }}" >> "$BROWSER_ROOT/build-info.txt"
+          echo "Workflow run: ${{ github.run_id }}" >> "$BROWSER_ROOT/build-info.txt"
+
+          # Verify base-href was applied
+          if [ -f "$BROWSER_ROOT/index.html" ]; then
+            echo "Checking base-href in built index.html:"
+            grep -o '<base href="[^"]*"' "$BROWSER_ROOT/index.html" || echo "No base tag found"
+          else
+            echo "WARNING: index.html not found at $BROWSER_ROOT/index.html"
+            echo "Searching for index.html:"
+            find dist -name "index.html" -type f
+          fi
+
+      - name: Verify build output and create 404.html
+        run: |
+          BROWSER_ROOT="dist/${{ env.PROJECT_NAME }}/browser"
+
+          # List the build output structure for debugging
+          echo "=== Build Output Structure ==="
+          ls -la "$BROWSER_ROOT/" 2>/dev/null || echo "browser directory does not exist"
+          echo ""
+          echo "=== All HTML files in build output ==="
+          find "$BROWSER_ROOT" -name "*.html" -type f | head -20
+          echo ""
+
+          # Check if root index.html exists (SPA build should have it at root)
+          if [ ! -f "$BROWSER_ROOT/index.html" ]; then
+            echo "WARNING: index.html not found at $BROWSER_ROOT/index.html"
+            echo "Searching for index.html in build output:"
+            INDEX_FILE=$(find dist -name "index.html" -type f | head -n 1)
+            if [ -n "$INDEX_FILE" ]; then
+              echo "Found index.html at: $INDEX_FILE"
+              BROWSER_ROOT=$(dirname "$INDEX_FILE")
+              echo "Using BROWSER_ROOT: $BROWSER_ROOT"
+            else
+              echo "ERROR: No index.html found anywhere in build output"
+              exit 1
+            fi
+          fi
+
+          echo "✓ Root index.html confirmed at: $BROWSER_ROOT/index.html"
+
+          # Create 404.html from root index.html for GitHub Pages SPA routing
+          # This allows client-side routing to work on GitHub Pages
+          cp "$BROWSER_ROOT/index.html" "$BROWSER_ROOT/404.html"
+          echo "✓ Created 404.html for GitHub Pages SPA routing"
+
+          # Verify file sizes
+          echo ""
+          echo "=== File Verification ==="
+          ls -lh "$BROWSER_ROOT/index.html" "$BROWSER_ROOT/404.html"
+
+          # Determine expected base-href based on deployment target
+          if [ -n "${{ env.CUSTOM_DOMAIN }}" ]; then
+            EXPECTED_BASE="/"
+          else
+            EXPECTED_BASE="/${{ env.REPO_NAME }}/"
+          fi
+          echo ""
+          echo "=== Verifying base-href (expected: $EXPECTED_BASE) ==="
+
+          echo "Checking base-href in all HTML files..."
+          find "$BROWSER_ROOT" -name "*.html" -type f -exec grep -H '<base href=' {} \; | head -5
+
+          ACTUAL_BASE=$(grep -o '<base href="[^"]*"' "$BROWSER_ROOT/index.html" | head -1 | sed 's|<base href="||;s|"||')
+          if [ "$ACTUAL_BASE" = "$EXPECTED_BASE" ]; then
+            echo "✓ Base-href is correct: $ACTUAL_BASE"
+          else
+            echo "WARNING: base-href is '$ACTUAL_BASE' but expected '$EXPECTED_BASE'. Rewriting..."
+            find "$BROWSER_ROOT" -name "*.html" -type f -exec sed -i "s|<base href=\"[^\"]*\">|<base href=\"$EXPECTED_BASE\">|g" {} \;
+            echo "✓ Base-href rewritten to $EXPECTED_BASE"
+          fi
+
+          # Fix absolute image paths to be relative (they should respect base-href)
+          echo "Fixing absolute image paths..."
+          find "$BROWSER_ROOT" -name "*.html" -type f -exec sed -i "s|src=\"/images/|src=\"images/|g" {} \;
+          find "$BROWSER_ROOT" -name "*.html" -type f -exec sed -i "s|href=\"/images/|href=\"images/|g" {} \;
+          echo "✓ Asset paths fixed (kept relative, fixed absolute image paths)"
+
+          # Verify base-href after fix
+          echo ""
+          echo "=== Final Verification ==="
+          echo "Base-href in root index.html:"
+          grep -o '<base href="[^"]*"' "$BROWSER_ROOT/index.html" | head -1
+          echo ""
+          echo "Sample asset paths in root index.html:"
+          echo "CSS:"
+          grep -o 'href="[^"]*\.css"' "$BROWSER_ROOT/index.html" | head -2 || echo "No CSS found"
+          echo "JS:"
+          grep -o 'src="[^"]*\.js"' "$BROWSER_ROOT/index.html" | head -2 || echo "No JS found"
+          echo "Images:"
+          grep -o 'src="[^"]*\.png"' "$BROWSER_ROOT/index.html" | head -2 || echo "No images found"
+          echo ""
+          echo "Note: This is a pure SPA build (no SSR/prerendering). All routes will be handled client-side via 404.html."
+          echo ""
+          echo "Verifying referenced files actually exist:"
+          JS_REF=$(grep -o 'src="[^"]*\.js"' "$BROWSER_ROOT/index.html" | head -1 | sed 's/src="//;s/"//')
+          CSS_REF=$(grep -o 'href="[^"]*\.css"' "$BROWSER_ROOT/index.html" | head -1 | sed 's/href="//;s/"//')
+          echo "JS reference: $JS_REF"
+          if [ -n "$JS_REF" ]; then
+            if [ -f "$BROWSER_ROOT/$JS_REF" ]; then
+              echo "✓ Referenced JS file exists at: $BROWSER_ROOT/$JS_REF"
+            else
+              echo "✗ Referenced JS file MISSING at: $BROWSER_ROOT/$JS_REF"
+              echo "  Looking for actual JS files:"
+              ls -la "$BROWSER_ROOT"/main-*.js 2>/dev/null | head -2
+            fi
+          fi
+          echo "CSS reference: $CSS_REF"
+          if [ -n "$CSS_REF" ]; then
+            if [ -f "$BROWSER_ROOT/$CSS_REF" ]; then
+              echo "✓ Referenced CSS file exists at: $BROWSER_ROOT/$CSS_REF"
+            else
+              echo "✗ Referenced CSS file MISSING at: $BROWSER_ROOT/$CSS_REF"
+              echo "  Looking for actual CSS files:"
+              ls -la "$BROWSER_ROOT"/styles-*.css 2>/dev/null | head -2
+            fi
+          fi
+
+      - name: Verify final artifact structure
+        run: |
+          INDEX_FILE=$(find dist -name "index.html" -type f | head -n 1)
+          if [ -z "$INDEX_FILE" ]; then
+            echo "ERROR: No index.html found in build output"
+            exit 1
+          fi
+          BROWSER_ROOT=$(dirname "$INDEX_FILE")
+          echo "Using BROWSER_ROOT: $BROWSER_ROOT"
+
+          echo "=== Final Artifact Structure ==="
+          echo "Root directory contents:"
+          ls -la "$BROWSER_ROOT/" | head -20
+          echo ""
+          echo "Checking for critical files:"
+          [ -f "$BROWSER_ROOT/index.html" ] && echo "✓ index.html exists" || echo "✗ index.html MISSING"
+          [ -f "$BROWSER_ROOT/404.html" ] && echo "✓ 404.html exists" || echo "✗ 404.html MISSING"
+
+          # Check for JS files
+          JS_FILES=$(find "$BROWSER_ROOT" -name "main-*.js" -type f)
+          if [ -n "$JS_FILES" ]; then
+            echo "✓ main JS bundle exists:"
+            echo "$JS_FILES" | head -3
+          else
+            echo "✗ main JS bundle MISSING"
+          fi
+
+          # Check for CSS files
+          CSS_FILES=$(find "$BROWSER_ROOT" -name "styles-*.css" -type f)
+          if [ -n "$CSS_FILES" ]; then
+            echo "✓ styles CSS exists:"
+            echo "$CSS_FILES" | head -3
+          else
+            echo "✗ styles CSS MISSING"
+          fi
+
+          # Check for images directory (Angular copies cliqure/public/* to artifact root)
+          if [ -d "$BROWSER_ROOT/images" ]; then
+            echo "✓ images directory exists"
+            echo "Images found:"
+            find "$BROWSER_ROOT/images" -type f | head -10
+          else
+            echo "✗ images directory MISSING"
+            echo "Searching for images in build output:"
+            find "$BROWSER_ROOT" -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" | head -10
+          fi
+
+          # Check for the logo specifically (used in header & favicon)
+          if [ -f "$BROWSER_ROOT/images/cliqure-logo.png" ]; then
+            echo "✓ cliqure-logo.png present"
+          else
+            echo "✗ cliqure-logo.png MISSING"
+          fi
+
+          # Check for favicon
+          if [ -f "$BROWSER_ROOT/favicon.ico" ]; then
+            echo "✓ favicon.ico present"
+          fi
+
+          echo ""
+          echo "Total files in artifact:"
+          find "$BROWSER_ROOT" -type f | wc -l
+
+          # Check base-href in index.html
+          echo ""
+          echo "=== Checking base-href in index.html ==="
+          grep -o '<base href="[^"]*"' "$BROWSER_ROOT/index.html" || echo "No base tag found"
+
+          echo ""
+          echo "=== SPA Build Info ==="
+          echo "✓ Pure client-side SPA build (no prerendered routes)"
+          echo "✓ All routes will be handled by Angular router"
+          echo "✓ 404.html redirects all unknown paths to index.html for client-side routing"
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Verify artifact structure before upload
+        run: |
+          INDEX_FILE=$(find dist -name "index.html" -type f | head -n 1)
+          if [ -z "$INDEX_FILE" ]; then
+            echo "ERROR: No index.html found in build output"
+            exit 1
+          fi
+          BROWSER_ROOT=$(dirname "$INDEX_FILE")
+          echo "Using BROWSER_ROOT: $BROWSER_ROOT"
+
+          echo "=== Final Artifact Structure Before Upload ==="
+          echo "Build info:"
+          cat "$BROWSER_ROOT/build-info.txt" 2>/dev/null || echo "No build-info.txt found"
+          echo ""
+          echo "Root files:"
+          ls -la "$BROWSER_ROOT/" | head -15
+          echo ""
+          echo "Checking critical files exist at root:"
+          ls "$BROWSER_ROOT"/main-*.js >/dev/null 2>&1 && echo "✓ JS file exists at root" || echo "✗ JS file MISSING at root"
+          ls "$BROWSER_ROOT"/styles-*.css >/dev/null 2>&1 && echo "✓ CSS file exists at root" || echo "✗ CSS file MISSING at root"
+          [ -d "$BROWSER_ROOT/images" ] && echo "✓ images directory exists" || echo "✗ images directory MISSING"
+          echo ""
+          echo "Sample HTML file asset references:"
+          if [ -f "$BROWSER_ROOT/index.html" ]; then
+            echo "From index.html:"
+            echo "  JS:"
+            grep -o 'src="[^"]*\.js"' "$BROWSER_ROOT/index.html" | head -1
+            echo "  CSS:"
+            grep -o 'href="[^"]*\.css"' "$BROWSER_ROOT/index.html" | head -1
+            echo "  Logo:"
+            grep -o 'href="[^"]*logo\.png[^"]*"' "$BROWSER_ROOT/index.html" | head -1 || echo "    No logo.png reference found"
+            echo "  All image references:"
+            grep -o 'src="[^"]*\.png[^"]*"' "$BROWSER_ROOT/index.html" | head -3
+          fi
+
+      - name: Add cache-busting and version info
+        run: |
+          INDEX_FILE=$(find dist -name "index.html" -type f | head -n 1)
+          if [ -z "$INDEX_FILE" ]; then
+            echo "ERROR: No index.html found in build output"
+            exit 1
+          fi
+          BROWSER_ROOT=$(dirname "$INDEX_FILE")
+          COMMIT_SHA="${{ github.sha }}"
+          BUILD_TIME=$(date -u +'%Y%m%d%H%M%S')
+
+          echo "Adding cache-busting meta tags and version info..."
+          # Add cache-busting meta tags to all HTML files before </head>
+          find "$BROWSER_ROOT" -name "*.html" -type f -exec sed -i "s|</head>|<meta name=\"build-commit\" content=\"$COMMIT_SHA\">\n<meta name=\"build-time\" content=\"$BUILD_TIME\">\n<meta http-equiv=\"Cache-Control\" content=\"no-cache, no-store, must-revalidate\">\n<meta http-equiv=\"Pragma\" content=\"no-cache\">\n<meta http-equiv=\"Expires\" content=\"0\">\n</head>|g" {} \;
+
+          echo "✓ Cache-busting meta tags added"
+          echo "Build commit: $COMMIT_SHA"
+          echo "Build time: $BUILD_TIME"
+
+          # Update build-info.txt with more details
+          echo "Build completed at $(date -u +'%Y-%m-%d %H:%M:%S UTC')" > "$BROWSER_ROOT/build-info.txt"
+          echo "Commit: $COMMIT_SHA" >> "$BROWSER_ROOT/build-info.txt"
+          echo "Workflow run: ${{ github.run_id }}" >> "$BROWSER_ROOT/build-info.txt"
+          echo "Build time: $BUILD_TIME" >> "$BROWSER_ROOT/build-info.txt"
+          echo "Repository: ${{ github.repository }}" >> "$BROWSER_ROOT/build-info.txt"
+
+          # Ensure CNAME file exists ONLY when a custom domain is configured.
+          # If we accidentally ship a CNAME on a project-page deploy, GitHub Pages
+          # will try to serve from that domain and break the default URL.
+          if [ -n "${{ env.CUSTOM_DOMAIN }}" ]; then
+            echo "${{ env.CUSTOM_DOMAIN }}" > "$BROWSER_ROOT/CNAME"
+            echo "✓ CNAME file written with: ${{ env.CUSTOM_DOMAIN }}"
+          else
+            if [ -f "$BROWSER_ROOT/CNAME" ]; then
+              rm -f "$BROWSER_ROOT/CNAME"
+              echo "✓ Removed stray CNAME (no custom domain configured)"
+            else
+              echo "✓ No CNAME (deploying as project page)"
+            fi
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Path is relative to repo root, regardless of working-directory above
+          path: 'cliqure/dist/cliqure/browser'
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Verify deployment
+        run: |
+          echo "=== Deployment Verification ==="
+          echo "Deployment URL: ${{ steps.deployment.outputs.page_url }}"
+          echo "Commit SHA: ${{ github.sha }}"
+          echo "Workflow Run ID: ${{ github.run_id }}"
+          echo ""
+          echo "To verify the deployment:"
+          echo "1. Visit: ${{ steps.deployment.outputs.page_url }}build-info.txt"
+          echo "2. Check browser console for build version"
+          echo "3. Hard refresh (Ctrl+Shift+R) to clear cache"
