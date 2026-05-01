@@ -21,22 +21,20 @@ concurrency:
 #   - Build output:     cliqure.site/cliqure/dist/cliqure/browser/
 #
 # Deployment mode:
-#   - Currently deploying as a GitHub Pages PROJECT site:
-#       URL:        https://<owner>.github.io/cliqure.site/
-#       base-href:  /cliqure.site/
-#       CNAME:      not written
-#   - When ready to switch to the custom domain (cliqure.com):
-#       1. Set CUSTOM_DOMAIN below to "cliqure.com"
-#       2. Configure DNS (A records to GitHub Pages IPs, or CNAME for subdomain)
-#       3. Re-run the workflow — it will write the CNAME file and use base-href=/
+#   - Custom domain ACTIVE: cliqure.com
+#       URL:        https://cliqure.com/
+#       base-href:  /
+#       CNAME:      written into the artifact ("cliqure.com")
+#   - To temporarily fall back to the project-page URL
+#     (https://<owner>.github.io/cliqure.site/), clear CUSTOM_DOMAIN below.
 
 env:
   ANGULAR_DIR: cliqure
   PROJECT_NAME: cliqure
   REPO_NAME: cliqure.site
-  # Leave empty to deploy at https://<owner>.github.io/cliqure.site/.
-  # Set to "cliqure.com" (or any custom domain) when you're ready to map DNS.
-  CUSTOM_DOMAIN: ''
+  # Live custom domain — base-href is built as / and a CNAME file is shipped.
+  # Leave empty to fall back to the project-page URL https://<owner>.github.io/cliqure.site/.
+  CUSTOM_DOMAIN: 'cliqure.com'
 
 jobs:
   build:
