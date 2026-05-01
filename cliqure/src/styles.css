@@ -63,6 +63,10 @@
     @apply flex h-10 w-10 shrink-0 items-center justify-center;
   }
 
+  .logo-mark {
+    @apply h-full w-full object-contain;
+  }
+
   .logo-wordmark {
     @apply text-2xl font-semibold tracking-tight lowercase;
     background: linear-gradient(120deg, #b8860b 0%, #c5a059 45%, #8b6d3a 100%);
